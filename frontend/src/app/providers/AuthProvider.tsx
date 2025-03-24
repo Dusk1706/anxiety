@@ -16,6 +16,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  recoverPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -125,12 +127,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Recover password function
+  const recoverPassword = async (email: string) => {
+    try {
+      // Simulate API call to send recovery email
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real app, the API would:
+      // 1. Generate a token and store it in the database with an expiry
+      // 2. Send an email with a link containing the token
+      console.log(`Recovery email would be sent to: ${email}`);
+      
+      // Success is handled in the component
+    } catch (error) {
+      console.error('Recover password error:', error);
+      throw new Error('Error al enviar el correo de recuperación');
+    }
+  };
+
+  // Reset password function
+  const resetPassword = async (token: string, newPassword: string) => {
+    try {
+      // Simulate API call to reset password
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real app, the API would:
+      // 1. Verify the token is valid and not expired
+      // 2. Update the user's password
+      // 3. Invalidate the token
+      console.log(`Password would be reset with token: ${token}`);
+      
+      // Success is handled in the component
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw new Error('Error al restablecer la contraseña');
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     register,
     logout,
+    recoverPassword,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -25,6 +25,7 @@ export default function Login() {
     }
   };
 
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
@@ -77,7 +78,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center">
               <input
                 id="remember-me"
@@ -91,9 +92,9 @@ export default function Login() {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/recover-password" className="font-medium text-blue-600 hover:text-blue-500">
                 ¿Olvidaste tu contraseña?
-              </a>
+              </Link>
             </div>
           </div>
 

@@ -6,7 +6,11 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define public paths that don't require authentication
-  const isPublicPath = path === '/login' || path === '/register' || path === '/';
+  const isPublicPath = path === '/login' || 
+                       path === '/register' || 
+                       path === '/' || 
+                       path === '/recover-password' || 
+                       path.startsWith('/reset-password');
 
   // Get the token from the cookies
   const token = request.cookies.get('authToken')?.value || '';
@@ -17,7 +21,9 @@ export function middleware(request: NextRequest) {
   }
 
   // If the user is authenticated and trying to access login/register, redirect to dashboard
-  if (isPublicPath && token && path !== '/') {
+  // But don't redirect from recover-password or reset-password
+  if (isPublicPath && token && path !== '/' && 
+      path !== '/recover-password' && !path.startsWith('/reset-password')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
