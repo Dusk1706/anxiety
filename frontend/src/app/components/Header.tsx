@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../providers/AuthProvider';
 
 type HeaderProps = {
-  activePage?: 'dashboard' | 'profile' | 'groups' | 'chat' | 'test' | 'activities';
+  activePage?: 'dashboard' | 'profile' | 'groups' | 'chat' | 'test' | 'activities' | 'posts';
 }
 
 export default function Header({ activePage = 'dashboard' }: HeaderProps) {
@@ -87,6 +87,16 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
                 }`}
               >
                 Actividades
+              </Link>
+              <Link
+                href="/dashboard/posts"
+                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                  activePage === 'posts'
+                    ? 'border-blue-500 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Posts
               </Link>
             </div>
           </div>
