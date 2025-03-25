@@ -15,6 +15,10 @@ export function middleware(request: NextRequest) {
   // Get the token from the cookies
   const token = request.cookies.get('authToken')?.value || '';
 
+  // Obtener la sesión del usuario
+  const hasCompletedTest = request.cookies.get('hasCompletedInitialTest')?.value;
+  const isTestPage = path === '/test';
+
   // If the path requires authentication and no token exists, redirect to login
   if (!isPublicPath && !token) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -24,6 +28,16 @@ export function middleware(request: NextRequest) {
   // But don't redirect from recover-password or reset-password
   if (isPublicPath && token && path !== '/' && 
       path !== '/recover-password' && !path.startsWith('/reset-password')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // Si el usuario está en el dashboard y no ha completado el test, redirigir al test
+  if (!hasCompletedTest && !isTestPage && path !== '/login' && path !== '/register') {
+    return NextResponse.redirect(new URL('/test', request.url));
+  }
+
+  // Si el usuario ya completó el test y trata de acceder a la página del test, redirigir al dashboard
+  if (hasCompletedTest && isTestPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
