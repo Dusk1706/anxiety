@@ -2,42 +2,37 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Get the path of the request
+  // Get the exact path of the request
   const path = request.nextUrl.pathname;
 
-  // Define public paths that don't require authentication
-  const isPublicPath = path === '/login' || 
-                       path === '/register' || 
-                       path === '/' || 
-                       path === '/recover-password' || 
-                       path.startsWith('/reset-password');
+  const isAuthPath = path === '/login' || path === '/register' || path === '/recover-password' || path === '/reset-password';
+  
+  const token = request.cookies.get('authToken')?.value;
+  const hasCompletedTest = request.cookies.get('testCompleted')?.value === 'true';
 
-  // Get the token from the cookies
-  const token = request.cookies.get('authToken')?.value || '';
+  // Check if we're on the test page (exact match)
+  const isTestPage = path === '/test' || path === '/test/';
+  
+  console.log({
+    path,
+    token,
+    hasCompletedTest,
+    isTestPage,
+    isAuthPath
+  });
 
-  // Obtener la sesión del usuario
-  const hasCompletedTest = request.cookies.get('hasCompletedInitialTest')?.value;
-  const isTestPage = path === '/test';
-
-  // If the path requires authentication and no token exists, redirect to login
-  if (!isPublicPath && !token) {
+  if (!token && isAuthPath === false) {
+    console.log('Redirecting to login: No auth token on protected path');
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If the user is authenticated and trying to access login/register, redirect to dashboard
-  // But don't redirect from recover-password or reset-password
-  if (isPublicPath && token && path !== '/' && 
-      path !== '/recover-password' && !path.startsWith('/reset-password')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Si el usuario está en el dashboard y no ha completado el test, redirigir al test
-  if (!hasCompletedTest && !isTestPage && path !== '/login' && path !== '/register') {
+  if (token && hasCompletedTest === false && isTestPage === false) {
+    console.log('Redirecting to test: User has not completed test');
     return NextResponse.redirect(new URL('/test', request.url));
   }
 
-  // Si el usuario ya completó el test y trata de acceder a la página del test, redirigir al dashboard
-  if (hasCompletedTest && isTestPage) {
+  if (token && hasCompletedTest && isTestPage) {
+    console.log('Redirecting to dashboard: User already completed test');
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

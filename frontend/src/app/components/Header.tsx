@@ -13,24 +13,25 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await logout();
-      // No need to redirect, the auth context will handle it
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
   return (
-    <nav className="bg-white shadow">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold gradient-text">Mi Aplicación</h1>
+    <header className="bg-white shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link href="/dashboard" className="text-xl font-bold gradient-text">
+                Mi Aplicación
+              </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link 
                 href="/dashboard" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'dashboard'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -40,7 +41,7 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
               </Link>
               <Link 
                 href="/dashboard/profile" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'profile'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -50,7 +51,7 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
               </Link>
               <Link 
                 href="/dashboard/groups" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'groups'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -60,7 +61,7 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
               </Link>
               <Link 
                 href="/dashboard/chat" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'chat'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -69,18 +70,8 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
                 Chat
               </Link>
               <Link 
-                href="/dashboard/test" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-                  activePage === 'test'
-                    ? 'border-blue-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                Test
-              </Link>
-              <Link 
                 href="/dashboard/activities" 
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'activities'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -90,7 +81,7 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
               </Link>
               <Link
                 href="/dashboard/posts"
-                className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+                className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 ${
                   activePage === 'posts'
                     ? 'border-blue-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -98,19 +89,19 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
               >
                 Posts
               </Link>
-            </div>
+            </nav>
           </div>
           <div className="flex items-center">
             <span className="mr-4 text-sm text-gray-700">Hola, {user?.name || 'Usuario'}</span>
             <button
               onClick={handleLogout}
-              className="rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cerrar sesión
             </button>
           </div>
         </div>
       </div>
-    </nav>
+    </header>
   );
 } 

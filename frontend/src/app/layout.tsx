@@ -1,6 +1,4 @@
 "use client";
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
@@ -22,20 +20,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('authToken');
-    const publicRoutes = ['/login', '/register', '/', '/recover-password'];
-    const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/reset-password');
-
-    // Si no está autenticado y no está en una ruta pública, redirigir al login
-    if (!isAuthenticated && !isPublicRoute) {
-      router.push('/login');
-    }
-  }, [pathname, router]);
-
   return (
     <html lang="es">
       <head>
