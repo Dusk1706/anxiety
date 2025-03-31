@@ -1,0 +1,11 @@
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+curl -X POST http://localhost:8080/api/auth/logout \
+  -H "Cookie: YOUR_SESSION_COOKIE_FROM_LOGIN_RESPONSE" \
+  -v
+
+
+ curl -X POST http://localhost:8080/api/auth/register   -H "Content-Type: application/json"   -d '{"email":"test@example.com","password":"password123"}'
+
