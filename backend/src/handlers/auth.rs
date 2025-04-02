@@ -1,5 +1,6 @@
 use actix_identity::Identity;
 use bcrypt::{hash, verify};
+use serde_json::json;
 use sqlx::PgPool;
 use validator::Validate;
 use uuid::Uuid;
@@ -7,52 +8,36 @@ use chrono::Utc;
 use actix_web::{web, HttpResponse, Responder, HttpRequest, HttpMessage}; // Added HttpMessage
 
 use crate::{
-    models::{LoginUser, RegisterUser},
+    models::{LoginUser, RegisterUser, User},
     utils::{error::HttpError, jwt::encode_token},
 };
 
 pub async fn login(
-    req: HttpRequest,
     user: web::Json<LoginUser>,
     pool: web::Data<PgPool>,
-    id: Identity,
 ) -> Result<HttpResponse, HttpError> {
-    // Validate user input
-    if let Err(e) = user.0.validate() {
-        return Err(HttpError::BadRequest(format!("Validation error: {}", e)));
-    }
+    // Validate input
+    user.validate()?;
 
-    // Check if user exists - Using runtime API instead of macros
-    let user_from_db = sqlx::query_as::<_, crate::models::User>(
-        "SELECT id, email, password, created_at, updated_at FROM users WHERE email = $1"
+    // Get user from database
+    let user_db = sqlx::query_as!(
+        User,
+        "SELECT * FROM users WHERE email = $1",
+        user.email
     )
-    .bind(&user.email)
-    .fetch_optional(pool.get_ref())
-    .await
-    .map_err(|e| HttpError::InternalServerError(format!("Database error: {}", e)))?;
-
-    let user_db = match user_from_db {
-        Some(user) => user,
-        None => return Err(HttpError::NotFound("User not found".to_string())),
-    };
+    .fetch_optional(&**pool)
+    .await?
+    .ok_or(HttpError::Unauthorized("Invalid credentials".into()))?;
 
     // Verify password
-    let is_valid = verify(&user.password, &user_db.password)
-        .map_err(|e| HttpError::InternalServerError(format!("Password verification error: {}", e)))?;
-
-    if !is_valid {
-        return Err(HttpError::Unauthorized("Invalid credentials".to_string()));
+    if !verify(&user.password, &user_db.password)? {
+        return Err(HttpError::Unauthorized("Invalid credentials".into()));
     }
 
-    // Generate JWT token
-    let token = encode_token(&user_db.id)
-        .map_err(|e| HttpError::InternalServerError(format!("Token generation error: {}", e)))?;
+    // Generate token
+    let token = encode_token(&user_db.id)?;
 
-    // Set identity using request extensions - Use &mut req instead
-    Identity::login(&mut req.extensions_mut(), user_db.id.to_string())
-        .map_err(|e| HttpError::InternalServerError(format!("Session error: {}", e)))?;
-    
-    Ok(HttpResponse::Ok().json(serde_json::json!({
+    Ok(HttpResponse::Ok().json(json!({
         "status": "success",
         "token": token,
         "user": {
@@ -62,8 +47,9 @@ pub async fn login(
     })))
 }
 
-pub async fn logout(id: Identity) -> impl Responder {
-    id.logout();
+pub async fn logout() -> impl Responder {
+    // Since JWT is stateless, server-side logout just means the client 
+    // should discard the token. We just return a success response.
     HttpResponse::Ok().json(serde_json::json!({
         "status": "success",
         "message": "Logged out successfully"

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '@/context/AuthContext';  // Updated import path
 
 type HeaderProps = {
   activePage?: 'dashboard' | 'profile' | 'groups' | 'chat' | 'test' | 'activities' | 'posts';
@@ -104,4 +104,4 @@ export default function Header({ activePage = 'dashboard' }: HeaderProps) {
       </div>
     </header>
   );
-} 
+}

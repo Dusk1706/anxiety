@@ -1,6 +1,9 @@
 use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use validator::ValidationErrors;
+use bcrypt::BcryptError;
+use jsonwebtoken::errors::Error as JwtError;
 
 #[derive(Error, Debug)]
 pub enum HttpError {
@@ -41,5 +44,29 @@ impl ResponseError for HttpError {
             status: status.to_string(),
             message,
         })
+    }
+}
+
+impl From<ValidationErrors> for HttpError {
+    fn from(err: ValidationErrors) -> Self {
+        HttpError::BadRequest(format!("Validation error: {}", err))
+    }
+}
+
+impl From<sqlx::Error> for HttpError {
+    fn from(err: sqlx::Error) -> Self {
+        HttpError::InternalServerError(format!("Database error: {}", err))
+    }
+}
+
+impl From<BcryptError> for HttpError {
+    fn from(err: BcryptError) -> Self {
+        HttpError::InternalServerError(format!("Password error: {}", err))
+    }
+}
+
+impl From<JwtError> for HttpError {
+    fn from(err: JwtError) -> Self {
+        HttpError::InternalServerError(format!("JWT error: {}", err))
     }
 }

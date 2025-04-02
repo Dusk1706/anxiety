@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../providers/AuthProvider';
-
+import { useAuth } from '@/context/AuthContext';  // Changed from '../../providers/AuthProvider'
 export default function RecoverPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');

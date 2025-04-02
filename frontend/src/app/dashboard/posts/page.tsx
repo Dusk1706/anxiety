@@ -1,10 +1,8 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '../../components/Header';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useAuth } from '@/context/AuthContext';  // Changed from '../../providers/AuthProvider'
 interface Post {
   id: number;
   title: string;

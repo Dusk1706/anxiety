@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAuth } from '../../providers/AuthProvider';
+import { useAuth } from '@/context/AuthContext'; // Updated import path
 import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 
@@ -224,4 +224,4 @@ export default function Profile() {
       </div>
     </div>
   );
-} 
+}
