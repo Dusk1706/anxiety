@@ -2,12 +2,17 @@
  * API Service for handling backend requests
  */
 
-const API_URL = 'http://127.0.0.1:8080';
+const API_URL = 'http://localhost:8080';
 
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
+interface ApiResponse {
+  status: 'success' | 'error';
+  token?: string;
+  user?: {
+    email: string;
+    id: number;
+  };
   message?: string;
+  error?: string;
 }
 
 /**
@@ -17,7 +22,7 @@ export const api = {
   /**
    * Make a POST request to the API
    */
-  post: async <T>(endpoint: string, data: any): Promise<ApiResponse<T>> => {
+  post: async <T extends ApiResponse>(endpoint: string, data: any): Promise<T> => {
     try {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
@@ -28,32 +33,40 @@ export const api = {
         credentials: 'include', // Include cookies in requests
       });
       
-      const result = await response.json();
-      
+      // If the response is not OK, extract the error message
       if (!response.ok) {
-        throw new Error(result.message || 'Error en la solicitud');
+        if (response.status === 401) {
+          throw new Error('Credenciales inválidas');
+        }
+        
+        const errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || errorText);
+        } catch {
+          throw new Error(errorText || 'Error en la solicitud');
+        }
       }
       
-      return result;
+      const result = await response.json();
+      return result as T;
     } catch (error) {
       console.error('API error:', error);
-      return { 
-        error: error instanceof Error ? error.message : 'Error desconocido' 
-      };
+      throw new Error(error instanceof Error ? error.message : 'Error desconocido');
     }
   },
 
   /**
    * Make a GET request to the API
    */
-  get: async <T>(endpoint: string): Promise<ApiResponse<T>> => {
+  get: async <T>(endpoint: string): Promise<ApiResponse> => {
     try {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies in requests
+        credentials: 'include',
       });
       
       const result = await response.json();
@@ -66,6 +79,7 @@ export const api = {
     } catch (error) {
       console.error('API error:', error);
       return { 
+        status: 'error',
         error: error instanceof Error ? error.message : 'Error desconocido' 
       };
     }

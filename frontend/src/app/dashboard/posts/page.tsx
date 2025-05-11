@@ -2,8 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Header from '../../components/Header';
-import { useAuth } from '../../providers/AuthProvider';
+import Header from '@/app/components/Header';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { postsService } from '@/services/posts.service';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface Post {
   id: number;
@@ -51,87 +57,19 @@ export default function Posts() {
 
   // Cargar posts
   useEffect(() => {
-    // Simulamos la carga de posts
-    setTimeout(() => {
-      const mockPosts: Post[] = [
-        {
-          id: 1,
-          title: 'Cómo superé mi miedo a hablar en público',
-          content: 'Durante años, el solo pensar en hablar frente a un grupo me producía ataques de pánico. Mi corazón se aceleraba, mis manos sudaban y mi mente se quedaba en blanco. Probé muchas técnicas, pero lo que realmente me ayudó fue la exposición gradual. Comencé hablando frente a un amigo, luego en grupos pequeños, y finalmente pude dar una presentación en mi trabajo. La clave fue no evitar la situación, sino enfrentarla poco a poco, desafiando esos pensamientos negativos automáticos que me decían que fracasaría. Hoy puedo decir que, aunque aún siento nervios, ya no me paralizan.',
-          author: {
-            id: 1,
-            name: 'Laura García'
-          },
-          date: 'Hace 2 días',
-          likes: 42,
-          comments: 8,
-          category: 'superacion',
-          tags: ['miedo', 'hablar en público', 'exposición', 'técnicas'],
-          isLiked: true
-        },
-        {
-          id: 2,
-          title: '5 técnicas de respiración que cambiaron mi vida con ansiedad',
-          content: 'La respiración es nuestra ancla en momentos de ansiedad intensa. Después de años lidiando con ataques de pánico, descubrí estas técnicas que quiero compartir con todos ustedes. La respiración 4-7-8 (inhalar por 4 segundos, mantener por 7, exhalar por 8) ha sido especialmente efectiva para mí en situaciones de crisis. También recomiendo la respiración diafragmática, que nos ayuda a conectar con nuestro cuerpo y romper el ciclo de pensamientos ansiosos. ¡Pruébenlas y cuéntenme qué les parece!',
-          author: {
-            id: 2,
-            name: 'Carlos Rodríguez'
-          },
-          date: 'Hace 5 días',
-          likes: 35,
-          comments: 12,
-          category: 'tecnicas',
-          tags: ['respiración', 'técnicas', 'ataques de pánico', 'mindfulness']
-        },
-        {
-          id: 3,
-          title: 'Mi viaje para superar la agorafobia: de no poder salir de casa a viajar solo',
-          content: 'Hace tres años, mi agorafobia era tan severa que no podía salir de mi casa sin sentir que el mundo se desmoronaba. Los espacios abiertos y las multitudes me provocaban un terror paralizante. Comencé terapia cognitivo-conductual y, con el apoyo de mis seres queridos, empecé a dar pequeños pasos. Primero, salir al jardín. Luego, caminar hasta la esquina. Cada pequeña victoria se celebraba como un gran logro. Hoy, acabo de regresar de un viaje de mochilero por Europa. La ansiedad no ha desaparecido completamente, pero ya no controla mi vida. Si estás pasando por algo similar, quiero que sepas que hay esperanza y que puedes recuperar tu libertad.',
-          author: {
-            id: 3,
-            name: 'Ana Martínez'
-          },
-          date: 'Hace 1 semana',
-          likes: 87,
-          comments: 23,
-          category: 'superacion',
-          tags: ['agorafobia', 'viajes', 'terapia', 'recuperación']
-        },
-        {
-          id: 4,
-          title: 'La importancia de celebrar los pequeños logros en el camino a la recuperación',
-          content: 'A menudo, cuando lidiamos con la ansiedad, tendemos a minimizar nuestros avances y centrarnos solo en lo que nos falta por lograr. Hace poco, mi terapeuta me sugirió llevar un "diario de victorias", donde anoto cada pequeño logro, por insignificante que parezca. Contestar una llamada telefónica que normalmente evitaría, ir a un evento social, o simplemente tener un día sin ataques de ansiedad. Esta práctica ha cambiado mi perspectiva completamente. Ahora, en lugar de sentir que no avanzo lo suficiente, puedo ver cuánto camino he recorrido ya. ¿Alguien más tiene estrategias para reconocer el progreso?',
-          author: {
-            id: 4,
-            name: 'Miguel Sánchez'
-          },
-          date: 'Hace 10 días',
-          likes: 56,
-          comments: 19,
-          category: 'motivacion',
-          tags: ['logros', 'progreso', 'recuperación', 'motivación']
-        },
-        {
-          id: 5,
-          title: 'Cómo la meditación cambió mi relación con la ansiedad generalizada',
-          content: 'Después de ser diagnosticado con trastorno de ansiedad generalizada, probé varios tratamientos. Los medicamentos me ayudaron inicialmente, pero fue la meditación diaria lo que realmente transformó mi vida. Al principio me costaba mucho sentarme en silencio con mis pensamientos, pero con práctica constante (incluso solo 5 minutos diarios), comencé a notar cambios significativos. Aprendí a observar mis pensamientos ansiosos sin identificarme con ellos. La ansiedad sigue apareciendo, pero ahora tengo una nueva relación con ella. Si estás comenzando con la meditación, mi consejo es ser paciente contigo mismo y recordar que es una práctica, no algo que debas "perfeccionar".',
-          author: {
-            id: 5,
-            name: 'Elena López'
-          },
-          date: 'Hace 2 semanas',
-          likes: 72,
-          comments: 18,
-          category: 'tecnicas',
-          tags: ['meditación', 'mindfulness', 'TAG', 'práctica diaria'],
-          isSaved: true
-        }
-      ];
-      
-      setPosts(mockPosts);
-      setFilteredPosts(mockPosts);
-      setLoading(false);
-    }, 1000);
+    const loadPosts = async () => {
+      try {
+        const posts = await postsService.getAll();
+        setPosts(posts);
+        setFilteredPosts(posts);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading posts:', error);
+        setLoading(false);
+      }
+    };
+
+    loadPosts();
   }, []);
 
   // Filtrar posts

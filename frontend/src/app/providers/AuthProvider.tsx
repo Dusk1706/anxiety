@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { authService } from '../../services/auth.service';
 
 interface User {
   id: string;
@@ -45,11 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           // In a real app, you would validate the token with your API
           // For demo, we'll create a mock user if token exists
-          setUser({
-            id: '1',
-            name: 'Usuario Demo',
-            email: 'usuario@ejemplo.com'
-          });
+          const userData = Cookies.get('userData');
+          if (userData) {
+            setUser(JSON.parse(userData));
+          }
         } else {
           setUser(null);
         }
@@ -68,24 +68,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await authService.login({
+        email,
+        password
+      });
 
-      // For demo purposes, always "succeed" with mock user
-      const mockUser: User = {
-        id: '1',
-        name: 'Usuario Demo',
-        email: email,
-      };
+      // Handle response
+      if (response.status === 'error') {
+        throw new Error(response.error || 'Error al iniciar sesión');
+      }
 
-      // Store auth token in cookies
-      Cookies.set('authToken', 'demo-token', { expires: 7 }); // Expires in 7 days
-      
-      setUser(mockUser);
-      router.push('/dashboard');
+      if (response.status === 'success' && response.token && response.user) {
+        // Store auth token and user data
+        Cookies.set('authToken', response.token, { expires: 7 });
+        
+        // Create a user object with the required fields
+        const user = {
+          id: response.user.id.toString(), // Convert number to string to match User interface
+          email: response.user.email,
+          name: email.split('@')[0] // Use email prefix as name if not provided
+        };
+        
+        // Store user data
+        Cookies.set('userData', JSON.stringify(user), { expires: 7 });
+        setUser(user);
+        
+        // Redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        throw new Error('No se recibieron datos de respuesta');
+      }
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Error al iniciar sesión');
+      throw error instanceof Error ? error : new Error('Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
@@ -95,11 +110,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, we'd make an API request here
-      router.push('/login');
+      const response = await authService.register({
+        name,
+        email,
+        password
+      });
+
+      // Handle response
+      if (response.status === 'error') {
+        throw new Error(response.error || 'Error al registrarse');
+      }
+
+      if (response.status === 'success' && response.token && response.user) {
+        // Store token
+        Cookies.set('authToken', response.token, { expires: 7 });
+        
+        // Create a user object with the required fields
+        const user = {
+          id: response.user.id.toString(), // Convert number to string to match User interface
+          email: response.user.email,
+          name: name // Use the name from the form since it's not returned by the backend
+        };
+        
+        // Store user data
+        Cookies.set('userData', JSON.stringify(user), { expires: 7 });
+        setUser(user);
+        
+        // Redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        throw new Error('No se recibieron datos de respuesta');
+      }
     } catch (error) {
       console.error('Register error:', error);
       throw new Error('Error al registrarse');
@@ -112,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
+      await authService.logout();
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       

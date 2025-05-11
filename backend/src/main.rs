@@ -1,9 +1,19 @@
 use actix_cors::Cors;
-use actix_web::{http, web, App, HttpServer};
+use actix_web::{web, App, HttpServer, middleware::Logger, http};
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_identity::IdentityMiddleware;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
-use sqlx::postgres::PgPoolOptions;
+use log::info;
+use sqlx::PgPool;
+use crate::config::Config;
+
+// Application state
+#[derive(Debug, Clone)]
+struct AppState {
+    pool: PgPool,
+    config: Config,
+}
 
 mod config;
 mod models;
@@ -11,24 +21,32 @@ mod handlers;
 mod routes;
 mod utils;
 mod middleware;
-
-use config::Config;
+mod db;
 use routes::configure;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
 
     let config = Config::from_env().expect("Failed to load configuration");
 
     // Set up database connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&config.database_url)
-        .await
-        .expect("Failed to create pool");
- 
+    let pool = match db::init_pool(&config.database_url).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            log::error!("Failed to create database pool: {}", e);
+            std::process::exit(1);
+        }
+    };
+    
+    // Create web::Data from the pool
+    let pool_data = web::Data::new(pool);
+
+    // Extract values to avoid ownership issues
+    let host = config.host.clone();
+    let port = config.port;
+
     // Secret key for session middleware
     let secret_key = {
         // Generate a fixed-size key for cookie signing
@@ -43,31 +61,73 @@ async fn main() -> std::io::Result<()> {
         actix_web::cookie::Key::derive_from(&key)
     };
 
-    // Extract values to avoid ownership issues
-    let host = config.host.clone();
-    let port = config.port;
-
     log::info!("Starting server at http://{}:{}", host, port);
 
+    // Configure authentication middleware
+    let auth = HttpAuthentication::bearer(crate::middleware::validator);
+    
+    // Create shared data
+    let app_data = web::Data::new(AppState {
+        pool: pool_data.get_ref().clone(),
+        config: config.clone(),
+    });
+
+    info!("Starting HTTP server at http://{}:{}", config.host, config.port);
+    
     HttpServer::new(move || {
+        // Configure CORS inside the closure to avoid thread safety issues
         let cors = Cors::default()
             .allowed_origin("http://localhost:3000")
-            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT, http::header::CONTENT_TYPE])
+            .allowed_origin("http://127.0.0.1:3000")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION, 
+                http::header::ACCEPT,
+                http::header::CONTENT_TYPE,
+                http::header::ORIGIN,
+            ])
             .supports_credentials()
             .max_age(3600);
 
-        App::new()
+        let app = App::new()
+            // Middleware
+            .wrap(Logger::default())
             .wrap(cors)
             .wrap(IdentityMiddleware::default())
             .wrap(
-                SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
-                    .cookie_secure(false)
-                    .build(),
+                SessionMiddleware::builder(
+                    CookieSessionStore::default(),
+                    secret_key.clone()
+                )
+                .cookie_http_only(true)
+                .cookie_secure(false) // Set to true in production with HTTPS
+                .build()
             )
-            .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(config.clone()))
-            .configure(configure)
+            // Shared application state
+            .app_data(app_data.clone());
+        
+        // Configure public routes (no authentication required)
+        let app = app.service(
+            web::scope("/api")
+                .service(
+                    web::scope("/auth")
+                        .route("/login", web::post().to(handlers::auth::login))
+                        .route("/register", web::post().to(handlers::auth::register))
+                )
+        );
+        
+        // Configure protected routes (authentication required)
+        let app = app.service(
+            web::scope("/api")
+                .wrap(auth.clone())
+                .service(
+                    web::scope("/auth")
+                        .route("/logout", web::post().to(handlers::auth::logout))
+                )
+        );
+        
+        // Configure other protected routes
+        app.configure(configure)
     })
     .bind((host, port))?
     .run()

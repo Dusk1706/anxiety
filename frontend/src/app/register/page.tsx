@@ -27,8 +27,12 @@ export default function Register() {
     try {
       await register(name, email, password);
       // No need to redirect, the auth context will handle it
-    } catch (err) {
-      setError('Error al registrarse. Por favor, inténtalo de nuevo.');
+    } catch (err: any) {
+      // Extract error message from different error types
+      const errorMessage = err?.response?.data?.error || 
+                         err?.message || 
+                         'Error al registrarse. Por favor, inténtalo de nuevo.';
+      setError(errorMessage);
       console.error('Registration error:', err);
     }
   };

@@ -19,9 +19,14 @@ interface LoginRequest {
 }
 
 interface AuthResponse {
-  user: User;
-  token: string;
+  status: 'success' | 'error';
+  token?: string;
+  user?: {
+    email: string;
+    id: number;
+  };
   message?: string;
+  error?: string;
 }
 
 /**
@@ -38,16 +43,16 @@ export const authService = {
       throw new Error(response.error);
     }
     
-    // Store token and user data if provided
-    if (response.data?.token) {
-      Cookies.set('authToken', response.data.token, { expires: 7 });
+    // Store token and user data
+    if (response.token) {
+      Cookies.set('authToken', response.token, { expires: 7 });
       // Store user data in cookie as JSON string
-      if (response.data.user) {
-        Cookies.set('userData', JSON.stringify(response.data.user), { expires: 7 });
+      if (response.user) {
+        Cookies.set('userData', JSON.stringify(response.user), { expires: 7 });
       }
     }
     
-    return response.data as AuthResponse;
+    return response;
   },
 
   /**
@@ -61,24 +66,19 @@ export const authService = {
         throw new Error(response.error);
       }
       
-      // Verify we have a valid response with data
-      if (!response.data) {
-        throw new Error('Invalid response from server');
-      }
-      
       // Store token and user data if provided
-      if (response.data.token) {
-        Cookies.set('authToken', response.data.token, { expires: 7 });
+      if (response.token) {
+        Cookies.set('authToken', response.token, { expires: 7 });
         // Store user data in cookie as JSON string
-        if (response.data.user) {
-          Cookies.set('userData', JSON.stringify(response.data.user), { expires: 7 });
+        if (response.user) {
+          Cookies.set('userData', JSON.stringify(response.user), { expires: 7 });
         }
       } else {
         // If no token is provided, the login was not successful
         throw new Error('Authentication failed: No token received');
       }
       
-      return response.data;
+      return response;
     } catch (error) {
       // Handle specific API errors vs JSON parsing errors
       if (error instanceof SyntaxError) {
