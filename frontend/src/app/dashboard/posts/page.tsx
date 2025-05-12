@@ -94,30 +94,76 @@ export default function Posts() {
     setFilteredPosts(result);
   }, [activeCategory, searchTerm, posts]);
 
-  const handleLike = (postId: number) => {
-    setPosts(prevPosts => prevPosts.map(post => {
-      if (post.id === postId) {
-        const isLiked = post.isLiked || false;
-        return {
-          ...post,
-          likes: isLiked ? post.likes - 1 : post.likes + 1,
-          isLiked: !isLiked
-        };
-      }
-      return post;
-    }));
+  const handleLike = async (postId: number) => {
+    try {
+      // Primero actualizar la UI para feedback inmediato
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isLiked = post.isLiked || false;
+          return {
+            ...post,
+            likes: isLiked ? post.likes - 1 : post.likes + 1,
+            isLiked: !isLiked
+          };
+        }
+        return post;
+      }));
+
+      // Luego enviar la solicitud al backend
+      await postsService.like(postId);
+    } catch (error) {
+      console.error('Error al dar like al post:', error);
+      
+      // Revertir cambios en caso de error
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isLiked = !post.isLiked;
+          return {
+            ...post,
+            likes: isLiked ? post.likes - 1 : post.likes + 1,
+            isLiked: !isLiked
+          };
+        }
+        return post;
+      }));
+      
+      // Opcional: Mostrar mensaje de error al usuario
+      alert('No se pudo actualizar el like. Por favor, intenta de nuevo.');
+    }
   };
 
-  const handleSave = (postId: number) => {
-    setPosts(prevPosts => prevPosts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          isSaved: !post.isSaved
-        };
-      }
-      return post;
-    }));
+  const handleSave = async (postId: number) => {
+    try {
+      // Primero actualizar la UI para feedback inmediato
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isSaved: !post.isSaved
+          };
+        }
+        return post;
+      }));
+
+      // Luego enviar la solicitud al backend
+      await postsService.save(postId);
+    } catch (error) {
+      console.error('Error al guardar el post:', error);
+      
+      // Revertir cambios en caso de error
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isSaved: !post.isSaved
+          };
+        }
+        return post;
+      }));
+      
+      // Opcional: Mostrar mensaje de error al usuario
+      alert('No se pudo guardar el post. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleCreatePost = async (e: React.FormEvent) => {

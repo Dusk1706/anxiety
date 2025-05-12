@@ -87,20 +87,26 @@ pub struct PostsResponse {
 
 pub async fn get_posts(
     pool: web::Data<DbPool>,
+    user: web::ReqData<User>,
     _query: web::Query<GetPostsQuery>,
 ) -> impl Responder {
-    // Consultar los posts con información del autor
+    // Consultar los posts con información del autor e información personalizada para el usuario actual
     match sqlx::query!(
         r#"
         SELECT 
             p.id, p.title, p.content, p.category, p.created_at, p.updated_at,
             p.likes_count, p.comments_count,
-            u.id as user_id, u.name, u.avatar
+            u.id as user_id, u.name, u.avatar,
+            CASE WHEN pl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
+            CASE WHEN ps.user_id IS NOT NULL THEN true ELSE false END as is_saved
         FROM posts p
         JOIN users u ON p.user_id = u.id
+        LEFT JOIN post_likes pl ON p.id = pl.post_id AND pl.user_id = $1
+        LEFT JOIN post_saves ps ON p.id = ps.post_id AND ps.user_id = $1
         WHERE u.is_active = true
         ORDER BY p.created_at DESC
-        "#
+        "#,
+        user.id
     )
     .fetch_all(pool.get_ref())
     .await {
@@ -118,14 +124,16 @@ pub async fn get_posts(
                     "content": record.content,
                     "author": {
                         "id": record.user_id,
-                        "name": record.name, // Cambiado de username a name
+                        "name": record.name,
                         "avatar": record.avatar
                     },
                     "date": date_str,
                     "likes": record.likes_count,
                     "comments": record.comments_count,
                     "category": record.category,
-                    "tags": [] // Por ahora vacío, se puede poblar con otra consulta si es necesario
+                    "tags": [], // Por ahora vacío, se puede poblar con otra consulta si es necesario
+                    "isLiked": record.is_liked,
+                    "isSaved": record.is_saved
                 })
             }).collect();
 
