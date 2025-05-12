@@ -120,7 +120,7 @@ export default function Posts() {
     }));
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validaciones básicas
@@ -129,24 +129,37 @@ export default function Posts() {
       return;
     }
     
-    // Crear nuevo post
-    const newPostObj: Post = {
-      id: posts.length + 1,
-      title: newPost.title,
-      content: newPost.content,
-      author: {
-        id: 99, // Usuario actual
-        name: user?.name || 'Usuario actual'
-      },
-      date: 'Justo ahora',
-      likes: 0,
-      comments: 0,
-      category: newPost.category,
-      tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
-    };
-    
-    // Actualizar lista de posts
-    setPosts([newPostObj, ...posts]);
+    try {
+      // Crear el post en el backend
+      const createdPost = await postsService.create({
+        title: newPost.title,
+        content: newPost.content,
+        category: newPost.category,
+        tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+      });
+      
+      // Crear el objeto de post para el frontend
+      const newPostObj: Post = {
+        ...createdPost,
+        author: {
+          id: user?.id ? parseInt(user.id, 10) : 0,
+          name: user?.name || 'Usuario actual'
+          // No incluimos avatar ya que no está en la interfaz User
+        },
+        isLiked: false,
+        isSaved: false,
+        tags: Array.isArray(createdPost.tags) ? createdPost.tags : []
+      };
+      
+      // Actualizar lista de posts
+      setPosts([newPostObj, ...posts]);
+      
+      // Mostrar mensaje de éxito
+      alert('¡Post creado exitosamente!');
+    } catch (error) {
+      console.error('Error al crear el post:', error);
+      alert('Error al crear el post. Por favor, inténtalo de nuevo.');
+    }
     
     // Resetear formulario
     setNewPost({

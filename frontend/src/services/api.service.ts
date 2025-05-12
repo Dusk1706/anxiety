@@ -22,13 +22,23 @@ export const api = {
   /**
    * Make a POST request to the API
    */
-  post: async <T extends ApiResponse>(endpoint: string, data: any): Promise<T> => {
+  post: async <T = any>(endpoint: string, data: any): Promise<T> => {
     try {
+      // Get token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add Authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data),
         credentials: 'include', // Include cookies in requests
       });
@@ -59,29 +69,42 @@ export const api = {
   /**
    * Make a GET request to the API
    */
-  get: async <T>(endpoint: string): Promise<ApiResponse> => {
+  get: async <T = any>(endpoint: string): Promise<T> => {
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+      // Get token from localStorage
+      const token = localStorage.getItem('authToken');
       
-      const result = await response.json();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
       
-      if (!response.ok) {
-        throw new Error(result.message || 'Error en la solicitud');
+      // Add Authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
       
-      return result;
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || errorText);
+        } catch {
+          throw new Error(errorText || 'Error en la solicitud');
+        }
+      }
+
+      const result = await response.json();
+      return result as T;
     } catch (error) {
       console.error('API error:', error);
-      return { 
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Error desconocido' 
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(errorMessage);
     }
   }
 };

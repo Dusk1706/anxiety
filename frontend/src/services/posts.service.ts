@@ -19,10 +19,17 @@ interface Post {
   image?: string;
 }
 
+interface PaginatedResponse<T> {
+  posts: T[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
 export const postsService = {
   getAll: async (): Promise<Post[]> => {
-    const response = await api.get<Post[]>('/api/posts');
-    return response || [];
+    const response = await api.get<PaginatedResponse<Post>>('/api/posts');
+    return response?.posts || [];
   },
 
   create: async (postData: Partial<Post>): Promise<Post> => {

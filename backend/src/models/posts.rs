@@ -4,14 +4,16 @@ use chrono::{DateTime, Utc};
 
 use std::default::Default;
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Post {
     pub id: i32,
     pub user_id: i32,
     pub title: String,
     pub content: String,
     pub category: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: DateTime<Utc>,
+    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub updated_at: Option<DateTime<Utc>>,
     pub likes_count: i32,
     pub comments_count: i32,

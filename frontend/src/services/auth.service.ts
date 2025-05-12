@@ -68,10 +68,14 @@ export const authService = {
       
       // Store token and user data if provided
       if (response.token) {
+        // Store in cookies and localStorage for consistency
         Cookies.set('authToken', response.token, { expires: 7 });
-        // Store user data in cookie as JSON string
+        localStorage.setItem('authToken', response.token);
+        
+        // Store user data
         if (response.user) {
           Cookies.set('userData', JSON.stringify(response.user), { expires: 7 });
+          localStorage.setItem('userData', JSON.stringify(response.user));
         }
       } else {
         // If no token is provided, the login was not successful
@@ -107,6 +111,10 @@ export const authService = {
       // Always remove both token and user data even if API call fails
       Cookies.remove('authToken');
       Cookies.remove('userData');
+      
+      // Also clear localStorage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
     }
   },
 
@@ -115,15 +123,24 @@ export const authService = {
    */
   getCurrentUser: async (): Promise<User | null> => {
     try {
-      const token = Cookies.get('authToken');
+      // Intenta obtener el token de cookies primero, luego de localStorage como respaldo
+      let token = Cookies.get('authToken');
       if (!token) {
-        return null;
+        const localToken = localStorage.getItem('authToken');
+        if (!localToken) {
+          return null;
+        }
+        token = localToken;
       }
       
-      // Get user data from cookie instead of API call
-      const userData = Cookies.get('userData');
+      // Intenta obtener datos de usuario de cookies primero, luego de localStorage
+      let userData = Cookies.get('userData');
       if (!userData) {
-        return null;
+        const localUserData = localStorage.getItem('userData');
+        if (!localUserData) {
+          return null;
+        }
+        userData = localUserData;
       }
       
       return JSON.parse(userData) as User;

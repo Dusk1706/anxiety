@@ -22,7 +22,7 @@ mod routes;
 mod utils;
 mod middleware;
 mod db;
-use routes::configure;
+// use routes::configure;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -75,8 +75,8 @@ async fn main() -> std::io::Result<()> {
     info!("Starting HTTP server at http://{}:{}", config.host, config.port);
     
     HttpServer::new(move || {
-        // Configure CORS inside the closure to avoid thread safety issues
-        let cors = Cors::default()
+        // Configure CORS
+        let cors = Cors::permissive()
             .allowed_origin("http://localhost:3000")
             .allowed_origin("http://127.0.0.1:3000")
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
@@ -106,28 +106,32 @@ async fn main() -> std::io::Result<()> {
             // Shared application state
             .app_data(app_data.clone());
         
-        // Configure public routes (no authentication required)
-        let app = app.service(
+        // Import routes modules
+        use crate::routes::posts;
+        
+        // Configure both public and protected routes
+        app.service(
             web::scope("/api")
+                .app_data(web::Data::new(pool_data.get_ref().clone()))
+                // Rutas públicas de autenticación (no requieren token)
                 .service(
                     web::scope("/auth")
                         .route("/login", web::post().to(handlers::auth::login))
                         .route("/register", web::post().to(handlers::auth::register))
+                        // Rutas protegidas de autenticación
+                        .service(
+                            web::scope("")
+                                .wrap(auth.clone())
+                                .route("/logout", web::post().to(handlers::auth::logout))
+                        )
                 )
-        );
-        
-        // Configure protected routes (authentication required)
-        let app = app.service(
-            web::scope("/api")
-                .wrap(auth.clone())
+                // Rutas protegidas de posts (todas requieren autenticación)
                 .service(
-                    web::scope("/auth")
-                        .route("/logout", web::post().to(handlers::auth::logout))
+                    web::scope("/posts")
+                        .wrap(auth.clone())
+                        .configure(routes::posts::configure)
                 )
-        );
-        
-        // Configure other protected routes
-        app.configure(configure)
+        )
     })
     .bind((host, port))?
     .run()
