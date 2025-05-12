@@ -20,8 +20,8 @@ CREATE TABLE posts (
     title VARCHAR(200),
     content TEXT,
     category VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ,
     likes_count INTEGER DEFAULT 0,
     comments_count INTEGER DEFAULT 0
 );
