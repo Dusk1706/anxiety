@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../../../components/Header';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { postsService } from '@/services/posts.service';
+import { commentsService } from '@/services/comments.service';
 
 interface Comment {
   id: number;
@@ -30,6 +33,7 @@ interface Post {
   date: string;
   likes: number;
   comments: Comment[];
+  comments_count?: number;
   category: string;
   tags: string[];
   isLiked?: boolean;
@@ -46,144 +50,212 @@ export default function PostDetail() {
   const [newComment, setNewComment] = useState('');
   const [relatedPosts, setRelatedPosts] = useState<Array<{id: number, title: string, category: string}>>([]);
 
-  // Cargar detalles del post
+  const { user } = useAuth();
+
+  // Cargar detalles del post y comentarios
   useEffect(() => {
-    // Simulamos la carga del post
-    setTimeout(() => {
-      // Post de ejemplo
-      const mockPost: Post = {
-        id: Number(postId),
-        title: 'Cómo superé mi miedo a hablar en público',
-        content: `Durante años, el solo pensar en hablar frente a un grupo me producía ataques de pánico. Mi corazón se aceleraba, mis manos sudaban y mi mente se quedaba en blanco. Probé muchas técnicas, pero lo que realmente me ayudó fue la exposición gradual.
-
-Comencé hablando frente a un amigo, luego en grupos pequeños, y finalmente pude dar una presentación en mi trabajo. La clave fue no evitar la situación, sino enfrentarla poco a poco, desafiando esos pensamientos negativos automáticos que me decían que fracasaría.
-
-Una técnica que me ayudó mucho fue la visualización. Antes de cada exposición, me tomaba 5 minutos para visualizarme a mí mismo hablando con confianza, respondiendo preguntas con calma y conectando con mi audiencia. Esta práctica entrena al cerebro para sentirse más cómodo en la situación real.
-
-También aprendí a cambiar mi enfoque: en lugar de preocuparme por lo que los demás pensarían de mí, me concentré en el valor que podía aportar con mi mensaje. Cuando nos enfocamos en ayudar a otros en lugar de en nuestros propios miedos, la ansiedad pierde gran parte de su poder.
-
-Hoy puedo decir que, aunque aún siento nervios antes de hablar en público (algo completamente normal), ya no me paralizan. He dado charlas ante cientos de personas y, lo más importante, he podido compartir información valiosa que ha ayudado a otros.
-
-Si estás luchando con este miedo, quiero que sepas que puedes superarlo. No sucederá de la noche a la mañana, pero con práctica constante y las herramientas adecuadas, podrás conquistarlo. ¡Tú puedes!`,
-        author: {
-          id: 1,
-          name: 'Laura García'
-        },
-        date: '15 de mayo de 2023',
-        likes: 42,
-        category: 'superacion',
-        tags: ['miedo', 'hablar en público', 'exposición', 'técnicas'],
-        isLiked: false,
-        isSaved: false,
-        comments: [
-          {
-            id: 1,
-            author: {
-              id: 2,
-              name: 'Carlos Rodríguez'
-            },
-            content: 'Gracias por compartir tu experiencia, Laura. Me identifico mucho con lo que cuentas. Estoy empezando a aplicar la exposición gradual y, aunque es difícil, noto pequeñas mejoras. Tu historia me da esperanza.',
-            date: 'Hace 1 día',
-            likes: 8,
-            isLiked: true
-          },
-          {
-            id: 2,
-            author: {
-              id: 3,
-              name: 'Ana Martínez'
-            },
-            content: 'La visualización es una técnica muy poderosa, ¡a mí también me ha ayudado mucho! Añadiría que grabar tus presentaciones y escucharlas después también puede ser útil para identificar áreas de mejora.',
-            date: 'Hace 2 días',
-            likes: 5
-          },
-          {
-            id: 3,
-            author: {
-              id: 4,
-              name: 'Miguel Sánchez'
-            },
-            content: '¿Alguna recomendación de libros o recursos sobre este tema? Estoy tratando de ayudar a mi hijo adolescente que tiene mucho miedo de hablar en clase.',
-            date: 'Hace 3 días',
-            likes: 2
-          }
-        ]
-      };
-      
-      // Posts relacionados
-      const mockRelatedPosts = [
-        { id: 2, title: '5 técnicas de respiración que cambiaron mi vida con ansiedad', category: 'tecnicas' },
-        { id: 3, title: 'Mi viaje para superar la agorafobia: de no poder salir de casa a viajar solo', category: 'superacion' },
-        { id: 5, title: 'Cómo la meditación cambió mi relación con la ansiedad generalizada', category: 'tecnicas' }
-      ];
-      
-      setPost(mockPost);
-      setRelatedPosts(mockRelatedPosts);
-      setLoading(false);
-    }, 1000);
-  }, [postId]);
-
-  const handleLikePost = () => {
-    if (!post) return;
-    
-    setPost({
-      ...post,
-      likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-      isLiked: !post.isLiked
-    });
-  };
-
-  const handleSavePost = () => {
-    if (!post) return;
-    
-    setPost({
-      ...post,
-      isSaved: !post.isSaved
-    });
-  };
-
-  const handleLikeComment = (commentId: number) => {
-    if (!post) return;
-    
-    const updatedComments = post.comments.map(comment => {
-      if (comment.id === commentId) {
-        return {
-          ...comment,
-          likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
-          isLiked: !comment.isLiked
+    const fetchPostDetails = async () => {
+      try {
+        // Cargar el post
+        const postData = await postsService.getById(Number(postId));
+        if (!postData) {
+          setLoading(false);
+          return;
+        }
+        
+        // Cargar comentarios del post
+        const commentsData = await commentsService.getByPostId(Number(postId));
+        
+        // Crear objeto de post completo con comentarios
+        const completePost: Post = {
+          ...postData,
+          comments: commentsData || []
         };
+        
+        setPost(completePost);
+        
+        // Cargar posts relacionados (simulado por ahora)
+        const mockRelatedPosts = [
+          { id: 2, title: '5 técnicas de respiración que cambiaron mi vida con ansiedad', category: 'tecnicas' },
+          { id: 3, title: 'Mi viaje para superar la agorafobia: de no poder salir de casa a viajar solo', category: 'superacion' },
+          { id: 5, title: 'Cómo la meditación cambió mi relación con la ansiedad generalizada', category: 'tecnicas' }
+        ];
+        
+        setRelatedPosts(mockRelatedPosts);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error al cargar los detalles del post:', error);
+        setLoading(false);
       }
-      return comment;
-    });
-    
-    setPost({
-      ...post,
-      comments: updatedComments
-    });
-  };
-
-  const handleSubmitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!post || !newComment.trim()) return;
-    
-    const newCommentObj: Comment = {
-      id: post.comments.length + 1,
-      author: {
-        id: 99, // Usuario actual
-        name: 'Usuario Actual'
-      },
-      content: newComment,
-      date: 'Justo ahora',
-      likes: 0
     };
     
-    setPost({
-      ...post,
-      comments: [newCommentObj, ...post.comments]
-    });
+    if (postId) {
+      fetchPostDetails();
+    }
+  }, [postId]);
+
+  const handleLikePost = async () => {
+    if (!post) return;
     
-    setNewComment('');
+    try {
+      // Actualizar UI inmediatamente (optimistic update)
+      setPost({
+        ...post,
+        likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+        isLiked: !post.isLiked
+      });
+      
+      // Enviar solicitud al backend
+      await postsService.like(post.id);
+    } catch (error) {
+      console.error('Error al dar like al post:', error);
+      // Revertir cambios en caso de error
+      setPost({
+        ...post,
+        likes: post.isLiked ? post.likes + 1 : post.likes - 1,
+        isLiked: !post.isLiked
+      });
+    }
+  };
+
+  const handleSavePost = async () => {
+    if (!post) return;
+    
+    try {
+      // Actualizar UI inmediatamente (optimistic update)
+      setPost({
+        ...post,
+        isSaved: !post.isSaved
+      });
+      
+      // Enviar solicitud al backend
+      await postsService.save(post.id);
+    } catch (error) {
+      console.error('Error al guardar el post:', error);
+      // Revertir cambios en caso de error
+      setPost({
+        ...post,
+        isSaved: !post.isSaved
+      });
+    }
+  };
+
+  const handleLikeComment = async (commentId: number) => {
+    if (!post) return;
+    
+    try {
+      // Actualizar UI inmediatamente (optimistic update)
+      const updatedComments = post.comments.map(comment => {
+        if (comment.id === commentId) {
+          return {
+            ...comment,
+            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
+            isLiked: !comment.isLiked
+          };
+        }
+        return comment;
+      });
+      
+      setPost({
+        ...post,
+        comments: updatedComments
+      });
+      
+      // Enviar solicitud al backend
+      await commentsService.like(commentId);
+    } catch (error) {
+      console.error('Error al dar like al comentario:', error);
+      // Revertir cambios en caso de error
+      const revertedComments = post.comments.map(comment => {
+        if (comment.id === commentId) {
+          return {
+            ...comment,
+            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
+            isLiked: !comment.isLiked
+          };
+        }
+        return comment;
+      });
+      
+      setPost({
+        ...post,
+        comments: revertedComments
+      });
+    }
+  };
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!post || !newComment.trim() || !user) return;
+    
+    try {
+      // Guardar el contenido del comentario antes de limpiarlo
+      const commentContent = newComment;
+      
+      // Crear un comentario temporal para actualización optimista
+      const tempComment: Comment = {
+        id: -1, // ID temporal
+        author: {
+          id: Number(user.id), // Convert string ID to number
+          name: user.name || 'Usuario',
+          avatar: user.avatar
+        },
+        content: commentContent,
+        date: 'Justo ahora',
+        likes: 0,
+        isLiked: false
+      };
+      
+      // Actualizar UI inmediatamente
+      setPost({
+        ...post,
+        comments: [tempComment, ...post.comments]
+      });
+      
+      // Limpiar campo de comentario
+      setNewComment('');
+      
+      // Enviar solicitud al backend
+      const createdComment = await commentsService.create(post.id, commentContent);
+      
+      // Solo actualizar el estado si tenemos post
+      if (post) {
+        // Actualizar lista de comentarios con el comentario real (con ID correcto)
+        const updatedComments = post.comments.map(comment => {
+          if (comment.id === -1) {
+            // Asegurarnos de preservar cualquier campo que no venga del backend
+            return {
+              ...comment,
+              ...createdComment,
+              // Asegurar que el autor esté correctamente establecido
+              author: createdComment.author || comment.author
+            };
+          }
+          return comment;
+        });
+        
+        // Actualizar el estado con el comentario actualizado
+        setPost({
+          ...post,
+          comments: updatedComments,
+          comments_count: (post.comments_count || 0) + 1
+        });
+      }
+    } catch (error) {
+      console.error('Error al crear comentario:', error);
+      // Eliminar el comentario temporal en caso de error
+      if (post) {
+        const filteredComments = post.comments.filter(comment => comment.id !== -1);
+        setPost({
+          ...post,
+          comments: filteredComments
+        });
+      }
+      
+      // Restaurar el texto del comentario para que el usuario pueda intentar nuevamente
+      setNewComment(newComment);
+    }
   };
 
   if (loading) {

@@ -106,8 +106,7 @@ async fn main() -> std::io::Result<()> {
             // Shared application state
             .app_data(app_data.clone());
         
-        // Import routes modules
-        use crate::routes::posts;
+        // Configure routes
         
         // Configure both public and protected routes
         app.service(
@@ -130,6 +129,12 @@ async fn main() -> std::io::Result<()> {
                     web::scope("/posts")
                         .wrap(auth.clone())
                         .configure(routes::posts::configure)
+                )
+                // Rutas protegidas de comentarios
+                .service(
+                    web::scope("/comments")
+                        .wrap(auth.clone())
+                        .configure(routes::comments::configure)
                 )
         )
     })

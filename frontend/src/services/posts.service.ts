@@ -32,6 +32,16 @@ export const postsService = {
     return response?.posts || [];
   },
 
+  getById: async (postId: number): Promise<Post | null> => {
+    try {
+      const response = await api.get<Post>(`/api/posts/${postId}`);
+      return response || null;
+    } catch (error) {
+      console.error(`Error fetching post with ID ${postId}:`, error);
+      return null;
+    }
+  },
+
   create: async (postData: Partial<Post>): Promise<Post> => {
     const response = await api.post<Post>('/api/posts', postData);
     if (!response) {

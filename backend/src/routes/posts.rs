@@ -3,7 +3,8 @@ use crate::models::posts::{Post, PostCreate, PostUpdate};
 use crate::models::categories::{Category, Tag};
 use crate::models::User;
 use crate::db::DbPool;
-use chrono::{DateTime, Utc, NaiveDateTime};
+use crate::utils::datetime::{datetime_to_utc, datetime_opt_to_utc, now_utc};
+use chrono::{DateTime, Utc};
 use log::error;
 use serde::Deserialize;
 use serde_json::json;
@@ -20,6 +21,91 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
        .route("tags", web::get().to(get_tags))
        .route("{id}/like", web::post().to(like_post))
        .route("{id}/save", web::post().to(save_post));
+}
+
+pub async fn get_post(
+    pool: web::Data<DbPool>,
+    user: web::ReqData<User>,
+    id: web::Path<i32>
+) -> impl Responder {
+    // Obtener post por ID con información de si el usuario lo ha dado like o guardado
+    match sqlx::query!(r#"
+        SELECT 
+            p.id, p.title, p.content, p.category, p.created_at, p.updated_at,
+            p.likes_count, p.comments_count,
+            u.id as user_id, u.name, u.avatar,
+            CASE WHEN pl.user_id IS NOT NULL THEN true ELSE false END as is_liked,
+            CASE WHEN ps.user_id IS NOT NULL THEN true ELSE false END as is_saved
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        LEFT JOIN post_likes pl ON p.id = pl.post_id AND pl.user_id = $1
+        LEFT JOIN post_saves ps ON p.id = ps.post_id AND ps.user_id = $1
+        WHERE p.id = $2 AND u.is_active = true
+        "#,
+        user.id,
+        *id
+    )
+    .fetch_optional(pool.get_ref())
+    .await {
+        Ok(Some(post)) => {
+            // La created_at es ya un DateTime<Utc> (con zona horaria)
+            let created_at_utc = match post.created_at {
+                Some(dt) => datetime_to_utc(dt),
+                None => now_utc() // Si es None, usamos la fecha actual
+            };
+            
+            // La updated_at también es DateTime<Utc>
+            let updated_at = datetime_opt_to_utc(post.updated_at);
+            
+            // Construir respuesta JSON
+            // Obtener etiquetas (tags) asociadas con este post
+            let tags = match sqlx::query!(r#"
+                SELECT t.name
+                FROM tags t
+                JOIN post_tags pt ON t.id = pt.tag_id
+                WHERE pt.post_id = $1
+                "#,
+                post.id
+            )
+            .fetch_all(pool.get_ref())
+            .await {
+                Ok(tags) => tags.into_iter().map(|t| t.name).collect::<Vec<String>>(),
+                Err(_) => vec![] // Si hay error, devolver lista vacía
+            };
+            
+            let post_json = json!({
+                "id": post.id,
+                "title": post.title,
+                "content": post.content,
+                "category": post.category,
+                "author": {
+                    "id": post.user_id,
+                    "name": post.name,
+                    "avatar": post.avatar,
+                },
+                "date": created_at_utc.to_rfc3339(),
+                "updated_at": updated_at.map(|dt| dt.to_rfc3339()),
+                "likes": post.likes_count,
+                "comments": post.comments_count,
+                "isLiked": post.is_liked,
+                "isSaved": post.is_saved,
+                "tags": tags,
+            });
+            
+            HttpResponse::Ok().json(post_json)
+        },
+        Ok(None) => {
+            HttpResponse::NotFound().json(json!({
+                "error": "Post no encontrado"
+            }))
+        },
+        Err(e) => {
+            error!("Error al obtener el post: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener el post"
+            }))
+        }
+    }
 }
 
 pub async fn get_categories() -> impl Responder {
@@ -214,54 +300,7 @@ pub async fn create_post(
     }
 }
 
-pub async fn get_post(
-    pool: web::Data<DbPool>,
-    _user: web::ReqData<User>,
-    id: web::Path<i32>,
-) -> impl Responder {
-    match sqlx::query!(
-        r#"
-        SELECT id, user_id, title, content, category, created_at, updated_at, likes_count, comments_count
-        FROM posts
-        WHERE id = $1
-        "#,
-        *id
-    )
-    .fetch_optional(pool.get_ref())
-    .await {
-        Ok(Some(record)) => {
-            let created_at = match record.created_at {
-                Some(dt) => dt, // Ya es DateTime<Utc>
-                None => {
-                    error!("Post {} has no created_at timestamp", record.id);
-                    return HttpResponse::InternalServerError().json(json!({ "error": "Post has invalid creation date" }));
-                }
-            };
-            
-            // El campo updated_at ya es Option<DateTime<Utc>>
-            let updated_at = record.updated_at;
-            
-            let post = Post {
-                id: record.id,
-                user_id: record.user_id.unwrap_or_default(),
-                title: record.title.unwrap_or_else(|| String::from("Untitled")),
-                content: record.content.unwrap_or_default(),
-                category: record.category.unwrap_or_else(|| String::from("general")),
-                created_at,
-                updated_at,
-                likes_count: record.likes_count.unwrap_or(0),
-                comments_count: record.comments_count.unwrap_or(0),
-            };
-            
-            HttpResponse::Ok().json(post)
-        },
-        Ok(None) => HttpResponse::NotFound().json(json!({ "error": "Post not found" })),
-        Err(e) => {
-            error!("Error fetching post: {}", e);
-            HttpResponse::InternalServerError().json(json!({ "error": "Internal server error" }))
-        }
-    }
-}
+// Esta función fue eliminada por estar duplicada, se mantiene la primera implementación
 
 pub async fn update_post(
     pool: web::Data<DbPool>,
