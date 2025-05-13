@@ -2,6 +2,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
+import { ReactNode } from 'react';
+import ChatWidget from './components/ChatWidget';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-gray-900 bg-gray-50`}
       >
         <AuthProvider>{children}</AuthProvider>
+        <ChatWidget />
       </body>
     </html>
   );

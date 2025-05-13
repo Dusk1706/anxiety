@@ -9,7 +9,7 @@ CREATE TABLE users (
     avatar TEXT,
     last_login TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE
 );
 
